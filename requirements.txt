@@ -1,2 +1,3 @@
-pyTelegramBotAPI
-Flask
+telebot
+selenium==4.1.0
+python-dotenv
