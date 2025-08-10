@@ -11,4 +11,4 @@ apt-get update
 apt-get install -y firefox-esr
 
 # Run your Python bot
-python your_bot_file_name.py
+python bot.py
