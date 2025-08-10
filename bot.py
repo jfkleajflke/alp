@@ -4,7 +4,8 @@ from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
-import time
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 # ===== إعداد البوت =====
 TOKEN = os.getenv("TELEGRAM_TOKEN", "8062995274:AAErOwOGL090cuu9ZOjWeBOt7ym9ydrRV9w")
@@ -29,31 +30,40 @@ def setup_driver():
     except Exception as e:
         raise Exception(f"خطأ في إعداد Selenium: {str(e)}")
 
-# ===== دالة جلب السعر =====
-def get_dollar_price():
-    driver = setup_driver()
+# ===== دالة التحقق من وجود الحقول =====
+def check_form_fields():
+    driver = None
     try:
-        driver.get("https://www.xe.com/currencyconverter/convert/?Amount=1&From=USD&To=IQD")
-        time.sleep(5)  # انتظار تحميل الصفحة
+        driver = setup_driver()
+        driver.get("https://db-iraq.gomail.gay")
 
-        # جلب النص من العنصر الذي يحتوي على السعر
-        price_element = driver.find_element(By.XPATH, '//p[@class="result__BigRate-sc-1bsijpp-1 iGrAod"]')
-        price = price_element.text
-        return f"💵 سعر الدولار اليوم: {price}"
+        # انتظر حتى يظهر الحقل الأول
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "fname"))
+        )
+
+        # جلب العناصر
+        driver.find_element(By.ID, "fname")
+        driver.find_element(By.ID, "lname")
+        driver.find_element(By.ID, "tname")
+
+        return "الحقول fname, lname, tname موجودة ✅"
+
     except Exception as e:
-        return f"حدث خطأ: {str(e)}"
+        return f"الحقول غير موجودة أو حدث خطأ: {str(e)}"
     finally:
-        driver.quit()
+        if driver:
+            driver.quit()
 
 # ===== أوامر البوت =====
 @bot.message_handler(commands=["start"])
 def send_welcome(message):
-    bot.reply_to(message, "أهلاً! أرسل /price لجلب سعر الدولار.")
+    bot.reply_to(message, "أهلاً! أرسل /checkform للتحقق من وجود حقول الاسم في الموقع.")
 
-@bot.message_handler(commands=["price"])
-def send_price(message):
-    bot.reply_to(message, "⏳ جاري جلب السعر...")
-    result = get_dollar_price()
+@bot.message_handler(commands=["checkform"])
+def check_form_command(message):
+    bot.reply_to(message, "⏳ جاري التحقق من الحقول...")
+    result = check_form_fields()
     bot.send_message(message.chat.id, result)
 
 # ===== تشغيل البوت =====
