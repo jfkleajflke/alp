@@ -15,7 +15,7 @@ options.add_argument("--headless")
 options.add_argument("--disable-gpu")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-gecko_path = '/usr/local/bin/geckodriver'
+GECKO_PATH = '/usr/bin/geckodriver'  # تم التغيير إلى /usr/bin
 
 # بوت تيليجرام
 TOKEN = os.getenv("TELEGRAM_TOKEN", "8062995274:AAErOwOGL090cuu9ZOjWeBOt7ym9ydrRV9w")
@@ -32,8 +32,16 @@ iraq_provinces = [
 user_states = {}
 
 def setup_driver():
-    service = Service(executable_path=gecko_path)
-    return webdriver.Firefox(service=service, options=options)
+    try:
+        # التأكد من وجود السواقة
+        if not os.path.exists(GECKO_PATH):
+            raise Exception(f"ملف geckodriver غير موجود في المسار: {GECKO_PATH}")
+        
+        service = Service(executable_path=GECKO_PATH)
+        driver = webdriver.Firefox(service=service, options=options)
+        return driver
+    except Exception as e:
+        raise Exception(f"فشل في إعداد المتصفح: {str(e)}\nمسار السواقة: {GECKO_PATH}")
 
 def fill_form(full_name, state):
     driver = None
@@ -65,7 +73,6 @@ def fill_form(full_name, state):
     finally:
         if driver:
             driver.quit()
-
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     chat_id = message.chat.id
