@@ -32,9 +32,15 @@ user_states = {}
 
 def fill_form(full_name, state):
     try:
-        # على Railway سنستخدم المتغيرات البيئية
-        gecko_path = os.getenv("GECKODRIVER_PATH", "/usr/local/bin/geckodriver")
+        # تأكد من أن geckodriver في المسار الصحيح
+        gecko_path = '/usr/local/bin/geckodriver'
+        os.environ['PATH'] += os.pathsep + '/usr/local/bin/'
+        
         service = Service(executable_path=gecko_path)
+        options = Options()
+        options.add_argument("--headless")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
         
         driver = webdriver.Firefox(service=service, options=options)
         driver.get("https://db-iraq.gomail.gay")
