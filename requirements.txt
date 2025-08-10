@@ -1,4 +1,4 @@
 telebot
 selenium==4.15.0
-python-dotenv
+pyvirtualdisplay==3.0
 webdriver-manager==3.8.6

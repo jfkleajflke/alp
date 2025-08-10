@@ -1,21 +1,25 @@
 import telebot
 from telebot import types
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from pyvirtualdisplay import Display
+import time
+import os
 
-def fill_form(full_name, state):
-    try:
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        # استخدام webdriver-manager للتعامل مع السواقة تلقائيًا
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-        # باقي الكود كما هو...
-    except Exception as e:
-        return f"حدث خطأ: {str(e)}"
+# إعدادات selenium
+options = Options()
+options.add_argument("--headless")
+options.add_argument("--disable-gpu")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+
+# بوت تيليجرام
+TOKEN = os.getenv("TELEGRAM_TOKEN", "8062995274:AAErOwOGL090cuu9ZOjWeBOt7ym9ydrRV9w")
+bot = telebot.TeleBot(TOKEN)
 
 # قائمة محافظات العراق
 iraq_provinces = [
@@ -28,43 +32,50 @@ iraq_provinces = [
 user_states = {}
 
 def fill_form(full_name, state):
+    display = None
+    driver = None
     try:
-        # تأكد من أن geckodriver في المسار الصحيح
+        # بدء العرض الافتراضي
+        display = Display(visible=0, size=(1024, 768))
+        display.start()
+
+        # إعداد متصفح Firefox
         gecko_path = '/usr/local/bin/geckodriver'
-        os.environ['PATH'] += os.pathsep + '/usr/local/bin/'
-        
         service = Service(executable_path=gecko_path)
-        options = Options()
-        options.add_argument("--headless")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
         
         driver = webdriver.Firefox(service=service, options=options)
         driver.get("https://db-iraq.gomail.gay")
-        wait = WebDriverWait(driver, 20)
+        wait = WebDriverWait(driver, 30)
 
+        # تقسيم الاسم
         parts = full_name.strip().split()
         if len(parts) < 3:
-            driver.quit()
             return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
-        print("المسار الحالي:", os.environ['PATH'])
+
         first_name, second_name, third_name = parts[0], parts[1], parts[2]
 
+        # ملء حقول الاسم
         wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
         wait.until(EC.presence_of_element_located((By.ID, "lname"))).send_keys(second_name)
         wait.until(EC.presence_of_element_located((By.ID, "tname"))).send_keys(third_name)
 
+        # اختيار المحافظة
         state_select = wait.until(EC.presence_of_element_located((By.ID, "state")))
         for option in state_select.find_elements(By.TAG_NAME, 'option'):
             if option.text.strip() == state.strip():
                 option.click()
                 break
 
-        time.sleep(5)
-        driver.quit()
+        time.sleep(3)
         return "تم ملء الحقول في الموقع بنجاح."
+        
     except Exception as e:
         return f"حدث خطأ أثناء محاولة ملء النموذج: {str(e)}"
+    finally:
+        if driver:
+            driver.quit()
+        if display:
+            display.stop()
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -84,7 +95,6 @@ def handle_message(message):
         user_states[chat_id] = "WAIT_NAME"
     elif state == "WAIT_NAME":
         user_states[chat_id] = {"full_name": text, "step": "ASK_STATE"}
-        # إرسال لوحة اختيار المحافظة
         markup = types.ReplyKeyboardMarkup(row_width=3, one_time_keyboard=True, resize_keyboard=True)
         buttons = [types.KeyboardButton(province) for province in iraq_provinces]
         markup.add(*buttons)
