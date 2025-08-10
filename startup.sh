@@ -13,5 +13,8 @@ mv geckodriver /usr/local/bin/
 # تصدير المسار للتأكد
 export PATH=$PATH:/usr/local/bin/
 
+# تأكد من أن geckodriver مثبت بشكل صحيح
+which geckodriver
+geckodriver --version
 # تشغيل البوت
 python bot.py

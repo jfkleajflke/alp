@@ -50,7 +50,7 @@ def fill_form(full_name, state):
         if len(parts) < 3:
             driver.quit()
             return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
-
+        print("المسار الحالي:", os.environ['PATH'])
         first_name, second_name, third_name = parts[0], parts[1], parts[2]
 
         wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
