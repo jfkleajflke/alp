@@ -15,6 +15,7 @@ options.add_argument("--headless")
 options.add_argument("--disable-gpu")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
+gecko_path = '/usr/local/bin/geckodriver'
 
 # بوت تيليجرام
 TOKEN = os.getenv("TELEGRAM_TOKEN", "8062995274:AAErOwOGL090cuu9ZOjWeBOt7ym9ydrRV9w")
@@ -30,43 +31,40 @@ iraq_provinces = [
 
 user_states = {}
 
+def setup_driver():
+    service = Service(executable_path=gecko_path)
+    return webdriver.Firefox(service=service, options=options)
+
 def fill_form(full_name, state):
-        try:
-            # إعداد المتصفح بدون Xvfb
-            gecko_path = '/usr/local/bin/geckodriver'
-            service = Service(executable_path=gecko_path)
-            options = Options()
-            options.add_argument("--headless")
-            options.add_argument("--disable-gpu")
-            options.add_argument("--no-sandbox")
-            options.add_argument("--disable-dev-shm-usage")
-            driver = webdriver.Firefox(service=service, options=options)
-            # باقي الكود كما هو...
-            driver.get("https://db-iraq.gomail.gay")
-            wait = WebDriverWait(driver, 30)
+    driver = None
+    try:
+        driver = setup_driver()
+        driver.get("https://db-iraq.gomail.gay")
+        wait = WebDriverWait(driver, 30)
 
-            parts = full_name.strip().split()
-            if len(parts) < 3:
-                driver.quit()
-                return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
+        parts = full_name.strip().split()
+        if len(parts) < 3:
+            return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
 
-            first_name, second_name, third_name = parts[0], parts[1], parts[2]
+        first_name, second_name, third_name = parts[0], parts[1], parts[2]
 
-            wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
-            wait.until(EC.presence_of_element_located((By.ID, "lname"))).send_keys(second_name)
-            wait.until(EC.presence_of_element_located((By.ID, "tname"))).send_keys(third_name)
+        wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
+        wait.until(EC.presence_of_element_located((By.ID, "lname"))).send_keys(second_name)
+        wait.until(EC.presence_of_element_located((By.ID, "tname"))).send_keys(third_name)
 
-            state_select = wait.until(EC.presence_of_element_located((By.ID, "state")))
-            for option in state_select.find_elements(By.TAG_NAME, 'option'):
-                if option.text.strip() == state.strip():
-                    option.click()
-                    break
+        state_select = wait.until(EC.presence_of_element_located((By.ID, "state")))
+        for option in state_select.find_elements(By.TAG_NAME, 'option'):
+            if option.text.strip() == state.strip():
+                option.click()
+                break
 
-            time.sleep(3)
+        time.sleep(3)
+        return "تم ملء الحقول بنجاح ✅"
+    except Exception as e:
+        return f"حدث خطأ ❌: {str(e)}"
+    finally:
+        if driver:
             driver.quit()
-            return "تم ملء الحقول في الموقع بنجاح."
-        except Exception as e:
-            return f"حدث خطأ: {str(e)}"
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
@@ -78,7 +76,6 @@ def send_welcome(message):
 def handle_message(message):
     chat_id = message.chat.id
     text = message.text.strip()
-
     state = user_states.get(chat_id, "ASK_NAME")
 
     if state == "ASK_NAME":
@@ -92,40 +89,18 @@ def handle_message(message):
         bot.send_message(chat_id, "اختر المحافظة من القائمة:", reply_markup=markup)
     elif isinstance(state, dict) and state.get("step") == "ASK_STATE":
         full_name = state["full_name"]
-        driver = None
-        try:
-            # إعداد المتصفح
-            gecko_path = '/usr/local/bin/geckodriver'
-            service = Service(executable_path=gecko_path)
-        
-            driver = webdriver.Firefox(service=service, options=options)
-            driver.get("https://db-iraq.gomail.gay")
-            wait = WebDriverWait(driver, 30)
+        province = text
+        if province not in iraq_provinces:
+            bot.send_message(chat_id, "يرجى اختيار المحافظة من القائمة فقط.")
+            return
+        bot.send_message(chat_id, "جارٍ ملء الحقول في الموقع ... يرجى الانتظار.", reply_markup=types.ReplyKeyboardRemove())
+        result = fill_form(full_name, province)
+        bot.send_message(chat_id, result)
+        user_states[chat_id] = "ASK_NAME"
+    else:
+        bot.send_message(chat_id, "حدث خطأ، يرجى المحاولة مرة أخرى.")
+        user_states[chat_id] = "ASK_NAME"
 
-            # معالجة الاسم
-            parts = full_name.strip().split()
-            if len(parts) < 3:
-                return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
-
-            first_name, second_name, third_name = parts[0], parts[1], parts[2]
-
-            # ملء الحقول
-            wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
-            wait.until(EC.presence_of_element_located((By.ID, "lname"))).send_keys(second_name)
-            wait.until(EC.presence_of_element_located((By.ID, "tname"))).send_keys(third_name)
-
-            # اختيار المحافظة
-            state_select = wait.until(EC.presence_of_element_located((By.ID, "state")))
-            for option in state_select.find_elements(By.TAG_NAME, 'option'):
-                if option.text.strip() == state.strip():
-                    option.click()
-                    break
-
-            time.sleep(3)
-            return "تم ملء الحقول بنجاح ✅"
-        
-        except Exception as e:
-            return f"حدث خطأ ❌: {str(e)}"
-        finally:
-            if driver:
-                driver.quit()
+if __name__ == "__main__":
+    print("Bot is running...")
+    bot.polling()
