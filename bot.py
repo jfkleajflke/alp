@@ -32,50 +32,42 @@ iraq_provinces = [
 user_states = {}
 
 def fill_form(full_name, state):
-    display = None
-    driver = None
-    try:
-        # بدء العرض الافتراضي
-        display = Display(visible=0, size=(1024, 768))
-        display.start()
+        try:
+            # إعداد المتصفح بدون Xvfb
+            gecko_path = '/usr/local/bin/geckodriver'
+            service = Service(executable_path=gecko_path)
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            driver = webdriver.Firefox(service=service, options=options)
+            # باقي الكود كما هو...
+            driver.get("https://db-iraq.gomail.gay")
+            wait = WebDriverWait(driver, 30)
 
-        # إعداد متصفح Firefox
-        gecko_path = '/usr/local/bin/geckodriver'
-        service = Service(executable_path=gecko_path)
-        
-        driver = webdriver.Firefox(service=service, options=options)
-        driver.get("https://db-iraq.gomail.gay")
-        wait = WebDriverWait(driver, 30)
+            parts = full_name.strip().split()
+            if len(parts) < 3:
+                driver.quit()
+                return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
 
-        # تقسيم الاسم
-        parts = full_name.strip().split()
-        if len(parts) < 3:
-            return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
+            first_name, second_name, third_name = parts[0], parts[1], parts[2]
 
-        first_name, second_name, third_name = parts[0], parts[1], parts[2]
+            wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
+            wait.until(EC.presence_of_element_located((By.ID, "lname"))).send_keys(second_name)
+            wait.until(EC.presence_of_element_located((By.ID, "tname"))).send_keys(third_name)
 
-        # ملء حقول الاسم
-        wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
-        wait.until(EC.presence_of_element_located((By.ID, "lname"))).send_keys(second_name)
-        wait.until(EC.presence_of_element_located((By.ID, "tname"))).send_keys(third_name)
+            state_select = wait.until(EC.presence_of_element_located((By.ID, "state")))
+            for option in state_select.find_elements(By.TAG_NAME, 'option'):
+                if option.text.strip() == state.strip():
+                    option.click()
+                    break
 
-        # اختيار المحافظة
-        state_select = wait.until(EC.presence_of_element_located((By.ID, "state")))
-        for option in state_select.find_elements(By.TAG_NAME, 'option'):
-            if option.text.strip() == state.strip():
-                option.click()
-                break
-
-        time.sleep(3)
-        return "تم ملء الحقول في الموقع بنجاح."
-        
-    except Exception as e:
-        return f"حدث خطأ أثناء محاولة ملء النموذج: {str(e)}"
-    finally:
-        if driver:
+            time.sleep(3)
             driver.quit()
-        if display:
-            display.stop()
+            return "تم ملء الحقول في الموقع بنجاح."
+        except Exception as e:
+            return f"حدث خطأ: {str(e)}"
 
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
