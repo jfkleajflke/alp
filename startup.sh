@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Download and install geckodriver
+wget https://github.com/mozilla/geckodriver/releases/download/v0.33.0/geckodriver-v0.33.0-linux64.tar.gz
+tar -xvzf geckodriver-v0.33.0-linux64.tar.gz
+chmod +x geckodriver
+mv geckodriver /usr/local/bin/
+
+# Install Firefox ESR (Extended Support Release)
+apt-get update
+apt-get install -y firefox-esr
+
+# Run your Python bot
+python your_bot_file_name.py
