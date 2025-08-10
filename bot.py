@@ -6,7 +6,6 @@ from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from pyvirtualdisplay import Display
 import time
 import os
 
@@ -93,18 +92,40 @@ def handle_message(message):
         bot.send_message(chat_id, "اختر المحافظة من القائمة:", reply_markup=markup)
     elif isinstance(state, dict) and state.get("step") == "ASK_STATE":
         full_name = state["full_name"]
-        province = text
-        if province not in iraq_provinces:
-            bot.send_message(chat_id, "يرجى اختيار المحافظة من القائمة فقط.")
-            return
-        bot.send_message(chat_id, "جارٍ ملء الحقول في الموقع ... يرجى الانتظار.", reply_markup=types.ReplyKeyboardRemove())
-        result = fill_form(full_name, province)
-        bot.send_message(chat_id, result)
-        user_states[chat_id] = "ASK_NAME"
-    else:
-        bot.send_message(chat_id, "حدث خطأ، يرجى المحاولة مرة أخرى.")
-        user_states[chat_id] = "ASK_NAME"
+        driver = None
+        try:
+            # إعداد المتصفح
+            gecko_path = '/usr/local/bin/geckodriver'
+            service = Service(executable_path=gecko_path)
+        
+            driver = webdriver.Firefox(service=service, options=options)
+            driver.get("https://db-iraq.gomail.gay")
+            wait = WebDriverWait(driver, 30)
 
-if __name__ == "__main__":
-    print("Bot is running...")
-    bot.polling()
+            # معالجة الاسم
+            parts = full_name.strip().split()
+            if len(parts) < 3:
+                return "يرجى إرسال الاسم الثلاثي بشكل صحيح (اسم، اسم الأب، اسم الجد)."
+
+            first_name, second_name, third_name = parts[0], parts[1], parts[2]
+
+            # ملء الحقول
+            wait.until(EC.presence_of_element_located((By.ID, "fname"))).send_keys(first_name)
+            wait.until(EC.presence_of_element_located((By.ID, "lname"))).send_keys(second_name)
+            wait.until(EC.presence_of_element_located((By.ID, "tname"))).send_keys(third_name)
+
+            # اختيار المحافظة
+            state_select = wait.until(EC.presence_of_element_located((By.ID, "state")))
+            for option in state_select.find_elements(By.TAG_NAME, 'option'):
+                if option.text.strip() == state.strip():
+                    option.click()
+                    break
+
+            time.sleep(3)
+            return "تم ملء الحقول بنجاح ✅"
+        
+        except Exception as e:
+            return f"حدث خطأ ❌: {str(e)}"
+        finally:
+            if driver:
+                driver.quit()
