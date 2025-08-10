@@ -1,24 +1,21 @@
 import telebot
 from telebot import types
 from selenium import webdriver
-from selenium.webdriver.firefox.service import Service
-from selenium.webdriver.firefox.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import time
-import os
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
 
-# إعدادات selenium - ستتغير عند النشر على Railway
-options = Options()
-options.add_argument("--headless")  # تشغيل بدون واجهة
-options.add_argument("--disable-gpu")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-dev-shm-usage")
-
-# بوت تيليجرام
-TOKEN = os.getenv("TELEGRAM_TOKEN", "8062995274:AAErOwOGL090cuu9ZOjWeBOt7ym9ydrRV9w")
-bot = telebot.TeleBot(TOKEN)
+def fill_form(full_name, state):
+    try:
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        # استخدام webdriver-manager للتعامل مع السواقة تلقائيًا
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        # باقي الكود كما هو...
+    except Exception as e:
+        return f"حدث خطأ: {str(e)}"
 
 # قائمة محافظات العراق
 iraq_provinces = [
