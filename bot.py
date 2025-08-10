@@ -33,16 +33,27 @@ user_states = {}
 
 def setup_driver():
     try:
-        # التأكد من وجود السواقة
-        if not os.path.exists(GECKO_PATH):
-            raise Exception(f"ملف geckodriver غير موجود في المسار: {GECKO_PATH}")
+        # مسارات متعددة للبحث عن geckodriver
+        possible_paths = [
+            '/app/.apt/usr/bin/geckodriver',  # المسار الجديد على Railway
+            '/usr/bin/geckodriver',
+            '/usr/local/bin/geckodriver'
+        ]
         
-        service = Service(executable_path=GECKO_PATH)
+        gecko_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                gecko_path = path
+                break
+                
+        if not gecko_path:
+            raise Exception(f"لم يتم العثور على geckodriver في المسارات التالية: {possible_paths}")
+        
+        service = Service(executable_path=gecko_path)
         driver = webdriver.Firefox(service=service, options=options)
         return driver
     except Exception as e:
-        raise Exception(f"فشل في إعداد المتصفح: {str(e)}\nمسار السواقة: {GECKO_PATH}")
-
+        raise Exception(f"فشل في إعداد المتصفح: {str(e)}")
 def fill_form(full_name, state):
     driver = None
     try:
